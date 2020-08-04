@@ -1,4 +1,5 @@
-// Package file provides functionality to process files with pipelined framework.
+// Package file provides functionality to process files with pipelined
+// framework.
 package file
 
 import (
@@ -8,16 +9,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"pipelined.dev/flac"
-	"pipelined.dev/mp3"
+	"pipelined.dev/audio/flac"
+	"pipelined.dev/audio/mp3"
+	"pipelined.dev/audio/wav"
 	"pipelined.dev/pipe"
-	"pipelined.dev/wav"
 )
 
 type (
 	// Format of the file that contains audio signal.
 	Format interface {
-		Pump(io.ReadSeeker) pipe.Pump
+		Source(io.ReadSeeker) pipe.SourceAllocatorFunc
 		DefaultExtension() string
 		MatchExtension(string) bool
 		Extensions() []string
@@ -98,16 +99,16 @@ func (f *format) MatchExtension(ext string) bool {
 	return f == format
 }
 
-// Pump returns pipe.Pump for corresponding format
+// Source returns pipe.Source for corresponding format
 // with injected ReadSeeker.
-func (f *format) Pump(rs io.ReadSeeker) pipe.Pump {
+func (f *format) Source(rs io.ReadSeeker) pipe.SourceAllocatorFunc {
 	switch f {
 	case WAV:
-		return &wav.Pump{ReadSeeker: rs}
+		return wav.Source{ReadSeeker: rs}.Source()
 	case MP3:
-		return &mp3.Pump{Reader: rs}
+		return mp3.Source{Reader: rs}.Source()
 	case FLAC:
-		return &flac.Pump{Reader: rs}
+		return flac.Source{Reader: rs}.Source()
 	}
 	return nil
 }
@@ -122,13 +123,15 @@ func (f *format) Extensions() []string {
 	return append(f.extensions[:0:0], f.extensions...)
 }
 
-// PipeFunc is user-defined function that takes pipe.Pump as argument to execute pipe.
-type PipeFunc func(pump pipe.Pump) error
+// PipeFunc is user-defined function that takes pipe.SourceAllocatorFunc as
+// argument to execute pipe.
+type PipeFunc func(pipe.SourceAllocatorFunc) error
 
-// WalkPipe takes user-defined pipe function and return filepath.WalkFunc. It allows
-// to use it with filepath.Walk function and execute pipe func with every file in a path.
-// This function will try to parse file format from it's extension. User can limit input
-// formats by providing allowed formats as argument.
+// WalkPipe takes user-defined pipe function and return filepath.WalkFunc.
+// It allows to use it with filepath.Walk function and execute pipe func
+// with every file in a path. This function will try to parse file format
+// from it's extension. User can limit input formats by providing allowed
+// formats as argument.
 func WalkPipe(fn PipeFunc, recursive bool, inputFormats ...Format) filepath.WalkFunc {
 	var allowedFormats map[Format]struct{}
 	if inputFormats != nil {
@@ -166,7 +169,7 @@ func WalkPipe(fn PipeFunc, recursive bool, inputFormats ...Format) filepath.Walk
 		}
 		defer f.Close() // since we only read file, it's ok to close it with defer
 
-		if err = fn(format.Pump(f)); err != nil {
+		if err = fn(format.Source(f)); err != nil {
 			return fmt.Errorf("error execution pipe func: %w", err)
 		}
 		return nil
