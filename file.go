@@ -104,11 +104,11 @@ func (f *format) MatchExtension(ext string) bool {
 func (f *format) Source(rs io.ReadSeeker) pipe.SourceAllocatorFunc {
 	switch f {
 	case WAV:
-		return wav.Source{ReadSeeker: rs}.Source()
+		return wav.Source(rs)
 	case MP3:
-		return mp3.Source{Reader: rs}.Source()
+		return mp3.Source(rs)
 	case FLAC:
-		return flac.Source{Reader: rs}.Source()
+		return flac.Source(rs)
 	}
 	return nil
 }
