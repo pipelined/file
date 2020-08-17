@@ -1,6 +1,6 @@
-// Package file provides functionality to process files with pipelined
+// Package fileformat provides functionality to process files with pipelined
 // framework.
-package file
+package fileformat
 
 import (
 	"fmt"
