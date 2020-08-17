@@ -1,4 +1,4 @@
-module pipelined.dev/file
+module pipelined.dev/audio/fileformat
 
 go 1.13
 

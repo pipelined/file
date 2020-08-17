@@ -1,6 +1,6 @@
-// Package file provides functionality to process files with pipelined
+// Package fileformat provides functionality to process files with pipelined
 // framework.
-package file
+package fileformat
 
 import (
 	"fmt"
@@ -125,31 +125,24 @@ func (f *format) Extensions() []string {
 
 // PipeFunc is user-defined function that takes pipe.SourceAllocatorFunc as
 // argument to execute pipe.
-type PipeFunc func(pipe.SourceAllocatorFunc) error
+type PipeFunc func(Format, io.ReadSeeker) error
 
 // WalkPipe takes user-defined pipe function and return filepath.WalkFunc.
 // It allows to use it with filepath.Walk function and execute pipe func
 // with every file in a path. This function will try to parse file format
 // from it's extension. User can limit input formats by providing allowed
 // formats as argument.
-func WalkPipe(fn PipeFunc, recursive bool, inputFormats ...Format) filepath.WalkFunc {
-	var allowedFormats map[Format]struct{}
-	if inputFormats != nil {
-		allowedFormats = make(map[Format]struct{})
-		for _, f := range inputFormats {
-			allowedFormats[f] = struct{}{}
-		}
-	}
+func WalkPipe(fn PipeFunc, recursive bool) filepath.WalkFunc {
 	return func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("error during walk: %w", err)
 		}
 		if fi.IsDir() {
-			// skip processing subdirs
-			if !recursive {
-				return filepath.SkipDir
+			if recursive {
+				return nil
 			}
-			return nil
+			// skip processing subdirs
+			return filepath.SkipDir
 		}
 
 		format, ok := FormatByPath(path)
@@ -157,19 +150,13 @@ func WalkPipe(fn PipeFunc, recursive bool, inputFormats ...Format) filepath.Walk
 			return nil
 		}
 
-		if allowedFormats != nil {
-			if _, ok := allowedFormats[format]; !ok {
-				return nil
-			}
-		}
-
-		f, err := os.Open(path)
+		file, err := os.Open(path)
 		if err != nil {
 			return fmt.Errorf("error opening file: %w", err)
 		}
-		defer f.Close() // since we only read file, it's ok to close it with defer
+		defer file.Close() // since we only read file, it's ok to close it with defer
 
-		if err = fn(format.Source(f)); err != nil {
+		if err = fn(format, file); err != nil {
 			return fmt.Errorf("error execution pipe func: %w", err)
 		}
 		return nil
