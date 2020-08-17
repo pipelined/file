@@ -123,16 +123,15 @@ func (f *format) Extensions() []string {
 	return append(f.extensions[:0:0], f.extensions...)
 }
 
-// PipeFunc is user-defined function that takes pipe.SourceAllocatorFunc as
-// argument to execute pipe.
-type PipeFunc func(Format, io.ReadSeeker) error
+// PipeFunc is user-defined function that allows to process files during
+// filewalk.
+type PipeFunc func(Format, string, os.FileInfo) error
 
-// WalkPipe takes user-defined pipe function and return filepath.WalkFunc.
+// Walk takes user-defined pipe function and return filepath.WalkFunc.
 // It allows to use it with filepath.Walk function and execute pipe func
 // with every file in a path. This function will try to parse file format
-// from it's extension. User can limit input formats by providing allowed
-// formats as argument.
-func WalkPipe(fn PipeFunc, recursive bool) filepath.WalkFunc {
+// from it's extension. See examples for more context.
+func Walk(fn PipeFunc, recursive bool) filepath.WalkFunc {
 	return func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return fmt.Errorf("error during walk: %w", err)
@@ -150,13 +149,7 @@ func WalkPipe(fn PipeFunc, recursive bool) filepath.WalkFunc {
 			return nil
 		}
 
-		file, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("error opening file: %w", err)
-		}
-		defer file.Close() // since we only read file, it's ok to close it with defer
-
-		if err = fn(format, file); err != nil {
+		if err = fn(format, path, fi); err != nil {
 			return fmt.Errorf("error execution pipe func: %w", err)
 		}
 		return nil
