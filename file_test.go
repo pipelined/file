@@ -37,8 +37,8 @@ func TestFilePump(t *testing.T) {
 			assert.NotNil(t, err)
 		} else {
 			assert.NotNil(t, format)
-			pump := format.Pump(nil)
-			assert.NotNil(t, pump)
+			source := format.Source(nil)
+			assert.NotNil(t, source)
 		}
 	}
 }
@@ -71,8 +71,8 @@ func TestExtensions(t *testing.T) {
 func TestWalk(t *testing.T) {
 	testPositive := func(path string, recursive bool, expected int, formats ...file.Format) func(*testing.T) {
 		return func(t *testing.T) {
-			pumps := make([]pipe.Pump, 0)
-			fn := func(p pipe.Pump) error {
+			pumps := make([]pipe.SourceAllocatorFunc, 0)
+			fn := func(p pipe.SourceAllocatorFunc) error {
 				pumps = append(pumps, p)
 				return nil
 			}
@@ -91,7 +91,7 @@ func TestWalk(t *testing.T) {
 	testFailedPipe := func(path string) func(*testing.T) {
 		return func(t *testing.T) {
 			err := filepath.Walk(path,
-				file.WalkPipe(func(pipe.Pump) error {
+				file.WalkPipe(func(pipe.SourceAllocatorFunc) error {
 					return fmt.Errorf("pipe error")
 				}, false))
 			assert.Error(t, err)
