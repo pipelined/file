@@ -130,7 +130,7 @@ type PipeFunc func(Format, string, os.FileInfo) error
 // Walk takes user-defined pipe function and return filepath.WalkFunc.
 // It allows to use it with filepath.Walk function and execute pipe func
 // with every file in a path. This function will try to parse file format
-// from it's extension. See examples for more context.
+// from it's extension.
 func Walk(fn PipeFunc, recursive bool) filepath.WalkFunc {
 	return func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
