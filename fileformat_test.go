@@ -2,14 +2,13 @@ package fileformat_test
 
 import (
 	"fmt"
-	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"pipelined.dev/audio/fileformat"
-	"pipelined.dev/pipe"
 )
 
 func TestFilePump(t *testing.T) {
@@ -72,27 +71,27 @@ func TestExtensions(t *testing.T) {
 func TestWalk(t *testing.T) {
 	testPositive := func(path string, recursive bool, expected int) func(*testing.T) {
 		return func(t *testing.T) {
-			pumps := make([]pipe.SourceAllocatorFunc, 0)
-			fn := func(f fileformat.Format, rs io.ReadSeeker) error {
-				pumps = append(pumps, f.Source(rs))
+			processed := 0
+			fn := func(f fileformat.Format, path string, fi os.FileInfo) error {
+				processed++
 				return nil
 			}
-			walkFn := fileformat.WalkPipe(fn, recursive)
+			walkFn := fileformat.Walk(fn, recursive)
 			err := filepath.Walk(path, walkFn)
 			assert.Nil(t, err)
-			assert.Equal(t, expected, len(pumps))
+			assert.Equal(t, expected, processed)
 		}
 	}
 	testFailedWalk := func() func(*testing.T) {
 		return func(t *testing.T) {
-			err := filepath.Walk("nonexistentfileformat.wav", fileformat.WalkPipe(nil, false))
+			err := filepath.Walk("nonexistentfileformat.wav", fileformat.Walk(nil, false))
 			assert.Error(t, err)
 		}
 	}
 	testFailedPipe := func(path string) func(*testing.T) {
 		return func(t *testing.T) {
 			err := filepath.Walk(path,
-				fileformat.WalkPipe(func(fileformat.Format, io.ReadSeeker) error {
+				fileformat.Walk(func(fileformat.Format, string, os.FileInfo) error {
 					return fmt.Errorf("pipe error")
 				}, false))
 			assert.Error(t, err)
