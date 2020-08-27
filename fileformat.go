@@ -74,19 +74,18 @@ var (
 
 // FormatByPath determines file format by file extension
 // extracted from path. If extension belongs to unsupported
-// format, second return argument will be false.
-func FormatByPath(path string) (Format, bool) {
+// format, nil is returned.
+func FormatByPath(path string) Format {
 	ext := filepath.Ext(path)
 	switch {
 	case WAV.MatchExtension(ext):
-		return WAV, true
+		return WAV
 	case MP3.MatchExtension(ext):
-		return MP3, true
+		return MP3
 	case FLAC.MatchExtension(ext):
-		return FLAC, true
-	default:
-		return nil, false
+		return FLAC
 	}
+	return nil
 }
 
 // MatchExtension checks if ext matches to one of the format's
@@ -144,8 +143,8 @@ func Walk(fn PipeFunc, recursive bool) filepath.WalkFunc {
 			return filepath.SkipDir
 		}
 
-		format, ok := FormatByPath(path)
-		if !ok {
+		format := FormatByPath(path)
+		if format == nil {
 			return nil
 		}
 

@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 
 	"pipelined.dev/audio/fileformat"
 )
@@ -32,13 +31,13 @@ func TestFilePump(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		format, err := fileformat.FormatByPath(test.fileName)
+		format := fileformat.FormatByPath(test.fileName)
 		if test.negative {
-			assert.NotNil(t, err)
+			assertNil(t, "format", format)
 		} else {
-			assert.NotNil(t, format)
+			assertNotNil(t, "format", format)
 			source := format.Source(nil)
-			assert.NotNil(t, source)
+			assertNotNil(t, "source", source)
 		}
 	}
 }
@@ -64,7 +63,7 @@ func TestExtensions(t *testing.T) {
 
 	for _, test := range tests {
 		exts := test.format.Extensions()
-		assert.Equal(t, test.expected, len(exts))
+		assertEqual(t, "extensions", len(exts), test.expected)
 	}
 }
 
@@ -78,14 +77,14 @@ func TestWalk(t *testing.T) {
 			}
 			walkFn := fileformat.Walk(fn, recursive)
 			err := filepath.Walk(path, walkFn)
-			assert.Nil(t, err)
-			assert.Equal(t, expected, processed)
+			assertNil(t, "error", err)
+			assertEqual(t, "processed", processed, expected)
 		}
 	}
 	testFailedWalk := func() func(*testing.T) {
 		return func(t *testing.T) {
 			err := filepath.Walk("nonexistentfileformat.wav", fileformat.Walk(nil, false))
-			assert.Error(t, err)
+			assertNotNil(t, "error", err)
 		}
 	}
 	testFailedPipe := func(path string) func(*testing.T) {
@@ -94,7 +93,7 @@ func TestWalk(t *testing.T) {
 				fileformat.Walk(func(fileformat.Format, string, os.FileInfo) error {
 					return fmt.Errorf("pipe error")
 				}, false))
-			assert.Error(t, err)
+			assertNotNil(t, "error", err)
 		}
 	}
 	t.Run("recursive", testPositive("_testdata", true, 2))
@@ -102,4 +101,23 @@ func TestWalk(t *testing.T) {
 	t.Run("nonexistent ext", testPositive("_testdata/test.nonexistentext", false, 0))
 	t.Run("nonexistent file", testFailedWalk())
 	t.Run("failed pipe", testFailedPipe("_testdata/test.wav"))
+}
+
+func assertEqual(t *testing.T, name string, result, expected interface{}) {
+	t.Helper()
+	if !reflect.DeepEqual(expected, result) {
+		t.Fatalf("%v\nresult: \t%T\t%+v \nexpected: \t%T\t%+v", name, result, result, expected, expected)
+	}
+}
+
+func assertNil(t *testing.T, name string, result interface{}) {
+	t.Helper()
+	assertEqual(t, name, result, nil)
+}
+
+func assertNotNil(t *testing.T, name string, result interface{}) {
+	t.Helper()
+	if reflect.DeepEqual(nil, result) {
+		t.Fatalf("%v\nresult: \t%T\t%+v \nexpected: \t%T\t%+v", name, result, result, nil, nil)
+	}
 }
