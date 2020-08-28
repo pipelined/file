@@ -33,7 +33,8 @@ func TestFilePump(t *testing.T) {
 	for _, test := range tests {
 		format := fileformat.FormatByPath(test.fileName)
 		if test.negative {
-			assertNil(t, "format", format)
+			var nilFormat *fileformat.Format
+			assertEqual(t, "format", format, nilFormat)
 		} else {
 			assertNotNil(t, "format", format)
 			source := format.Source(nil)
