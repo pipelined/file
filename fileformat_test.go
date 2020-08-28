@@ -33,7 +33,8 @@ func TestFilePump(t *testing.T) {
 	for _, test := range tests {
 		format := fileformat.FormatByPath(test.fileName)
 		if test.negative {
-			assertNil(t, "format", format)
+			var nilFormat *fileformat.Format
+			assertEqual(t, "format", format, nilFormat)
 		} else {
 			assertNotNil(t, "format", format)
 			source := format.Source(nil)
@@ -44,19 +45,19 @@ func TestFilePump(t *testing.T) {
 
 func TestExtensions(t *testing.T) {
 	var tests = []struct {
-		format   fileformat.Format
+		format   *fileformat.Format
 		expected int
 	}{
 		{
-			fileformat.WAV,
+			fileformat.WAV(),
 			2,
 		},
 		{
-			fileformat.MP3,
+			fileformat.MP3(),
 			1,
 		},
 		{
-			fileformat.FLAC,
+			fileformat.FLAC(),
 			1,
 		},
 	}
@@ -71,7 +72,7 @@ func TestWalk(t *testing.T) {
 	testPositive := func(path string, recursive bool, expected int) func(*testing.T) {
 		return func(t *testing.T) {
 			processed := 0
-			fn := func(f fileformat.Format, path string, fi os.FileInfo) error {
+			fn := func(f *fileformat.Format, path string, fi os.FileInfo) error {
 				processed++
 				return nil
 			}
@@ -90,7 +91,7 @@ func TestWalk(t *testing.T) {
 	testFailedPipe := func(path string) func(*testing.T) {
 		return func(t *testing.T) {
 			err := filepath.Walk(path,
-				fileformat.Walk(func(fileformat.Format, string, os.FileInfo) error {
+				fileformat.Walk(func(*fileformat.Format, string, os.FileInfo) error {
 					return fmt.Errorf("pipe error")
 				}, false))
 			assertNotNil(t, "error", err)
